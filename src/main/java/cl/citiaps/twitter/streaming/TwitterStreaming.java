@@ -15,6 +15,7 @@ public class TwitterStreaming {
 	private MongoConnection conn;
 	private MongoCollection<Document> collection;
 	private Set<String> keywords;
+	private Twitter twitter;
 
 	private TwitterStreaming() {
 		this.twitterStream = new TwitterStreamFactory().getInstance();
@@ -24,6 +25,7 @@ public class TwitterStreaming {
 		/* Se crea la conexión con MongoDB y se almacena la colección de Tweets */
 		this.conn = new MongoConnection("127.0.0.1", 27017, "TBD", "tweets");
 		this.collection = this.conn.getCollection();
+		twitter = new TwitterFactory().getInstance();
 	}
 
 	private void loadKeywords() {
@@ -119,6 +121,71 @@ public class TwitterStreaming {
 				// Se inserta el documento en la colección de MongoDB
 				collection.insertOne(tweet);
 				System.out.println("Tweet numero " + Long.toString(collection.count()));
+
+				/*
+				Se verifica si el status actual es una respuesta de un tweet que fue previamente
+				publicado. En caso de que se así, se recupera toda la discusión generada por el
+				tweet original
+				 */
+				if(status.getInReplyToStatusId() > 0){
+					//Se obtiene la discusión asociada al tweet
+					List<Status> retweets = getDiscussion(status, twitter);
+					for (Status status1 : retweets){
+						System.out.println(status1.getText());
+					}
+					//Geolocalización del retweet
+					String countryRetweet;
+					String longitudeRetweet;
+					String latitudeRetweet;
+
+					//Lista de Hashtags del retweet
+					List<String> retweetsHashtags = new ArrayList<>();
+
+					int hRetweetCount;
+
+					for (Status retweet : retweets){
+						if(retweet.getId() != status.getId()){
+							try {
+								countryRetweet = retweet.getUser().getLocation();
+							} catch (NullPointerException ne){
+								countryRetweet = "none";
+							}
+							try {
+								longitudeRetweet = Double.toString(retweet.getGeoLocation().getLongitude());
+								latitudeRetweet = Double.toString(retweet.getGeoLocation().getLatitude());
+							} catch (NullPointerException e){
+								longitudeRetweet = "none";
+								latitudeRetweet = "none";
+							}
+							hRetweetCount = retweet.getHashtagEntities().length;
+							if(hRetweetCount > 0){
+								//Se agregan los hashtags al arreglo
+								for(TweetEntity hashtag : retweet.getHashtagEntities()){
+									retweetsHashtags.add(hashtag.getText());
+								}
+							}
+
+							// Se crea un documento que representa el JSON que se almacenará en MongoDB
+							Document retweetDoc = new Document("id", retweet.getId())
+									.append("user", retweet.getUser().getScreenName())
+									.append("name", retweet.getUser().getName())
+									.append("tweetText", retweet.getText())
+									.append("hashtags", retweetsHashtags)
+									.append("day", day)
+									.append("month", month)
+									.append("year", year)
+									.append("latitude", latitudeRetweet)
+									.append("longitude", longitudeRetweet)
+									.append("country", countryRetweet)
+									.append("hour", hour)
+									.append("minute", min);
+
+							// Se inserta el documento en la colección de MongoDB
+							collection.insertOne(retweetDoc);
+							System.out.println("Tweet numero " + Long.toString(collection.count()) + " (Es una respuesta)");
+						}
+					}
+				}
 			}
 		};
 
@@ -128,6 +195,32 @@ public class TwitterStreaming {
 
 		this.twitterStream.addListener(listener);
 		this.twitterStream.filter(fq);
+	}
+
+	//Método que retorna la discusión generada por un tweet
+	public List<Status> getDiscussion(Status status, Twitter twitter){
+
+		List<Status> replies = new ArrayList<>();
+		List<Status> tweets;
+
+		try{
+			Query query = new Query("to:" + status.getUser().getScreenName() + "since_id:" + status.getId());
+			QueryResult results;
+			do{
+				results = twitter.search(query);
+				tweets = results.getTweets();
+				for(Status tweet : tweets){
+					//Se compara si la id del tweet original es igual a la id del tweet obtenido por la consulta
+					if(status.getId() == tweet.getInReplyToStatusId()){
+						replies.add(tweet);
+					}
+				}
+			} while((query = results.nextQuery()) != null);
+
+		} catch (TwitterException e) {
+			e.printStackTrace();
+		}
+		return replies;
 	}
 	
 	public static void main(String[] args) {

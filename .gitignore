@@ -1,0 +1,21 @@
+# Created by .ignore support plugin (hsz.mobi)
+.gradle
+
+build/
+
+gradlew
+
+gradle
+
+gradlew.bat
+
+.idea
+
+twitter-streaming.iml
+
+gradle-app.setting
+
+!gradle-wrapper.jar
+
+.gradletasknamecache
+/.nb-gradle/
