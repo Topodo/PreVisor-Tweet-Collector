@@ -127,12 +127,10 @@ public class TwitterStreaming {
 				publicado. En caso de que se así, se recupera toda la discusión generada por el
 				tweet original
 				 */
+				/*System.out.println("id_original: " + status.getInReplyToStatusId());
 				if(status.getInReplyToStatusId() > 0){
 					//Se obtiene la discusión asociada al tweet
 					List<Status> retweets = getDiscussion(status, twitter);
-					for (Status status1 : retweets){
-						System.out.println(status1.getText());
-					}
 					//Geolocalización del retweet
 					String countryRetweet;
 					String longitudeRetweet;
@@ -185,7 +183,7 @@ public class TwitterStreaming {
 							System.out.println("Tweet numero " + Long.toString(collection.count()) + " (Es una respuesta)");
 						}
 					}
-				}
+				}*/
 			}
 		};
 
@@ -204,12 +202,15 @@ public class TwitterStreaming {
 		List<Status> tweets;
 
 		try{
-			Query query = new Query("to:" + status.getUser().getScreenName() + "since_id:" + status.getId());
+			Query query = new Query("to:" + status.getUser().getScreenName());
+			query.setSinceId(status.getId());
 			QueryResult results;
 			do{
 				results = twitter.search(query);
 				tweets = results.getTweets();
+				System.out.println("elementos: " + tweets.size());
 				for(Status tweet : tweets){
+					System.out.println(tweet.getText() + " lalala");
 					//Se compara si la id del tweet original es igual a la id del tweet obtenido por la consulta
 					if(status.getId() == tweet.getInReplyToStatusId()){
 						replies.add(tweet);
