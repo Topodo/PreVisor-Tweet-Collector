@@ -120,7 +120,8 @@ public class TwitterStreaming {
 
 				// Se inserta el documento en la colección de MongoDB
 				collection.insertOne(tweet);
-				System.out.println("Tweet numero " + Long.toString(collection.count()));
+				//Se calcula el sentimiento del tweet
+				double sentiment = new SentimentAnalyzer().calculateSentiment(status.getText());
 
 				/*
 				Se verifica si el status actual es una respuesta de un tweet que fue previamente
