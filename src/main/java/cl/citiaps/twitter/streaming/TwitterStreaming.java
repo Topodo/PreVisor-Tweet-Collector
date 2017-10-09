@@ -150,44 +150,43 @@ public class TwitterStreaming {
 				double sentiment = new SentimentAnalyzer().calculateSentiment(status.getText());
 				System.out.println("Tweet numero: " + collection.count());
 
-				/*
-				Se verifica si el status actual es una respuesta de un tweet que fue previamente
-				publicado. En caso de que se así, se recupera toda la discusión generada por el
-				tweet original
+				/*Se verifica si el status actual es un retweet, luego, almacena todos los
+				retweets del status original en MongoDB
 				 */
-				/*System.out.println("id_original: " + status.getInReplyToStatusId());
-				if(status.getInReplyToStatusId() > 0){
-					//Se obtiene la discusión asociada al tweet
-					List<Status> retweets = getDiscussion(status, twitter);
-					//Geolocalización del retweet
-					String countryRetweet;
-					String longitudeRetweet;
-					String latitudeRetweet;
 
-					//Lista de Hashtags del retweet
-					List<String> retweetsHashtags = new ArrayList<>();
-
-					int hRetweetCount;
-
-					for (Status retweet : retweets){
-						if(retweet.getId() != status.getId()){
+				if(status.isRetweet()){
+					try {
+						List<Status> retweets = twitter.getRetweets(status.getRetweetedStatus().getId());
+						for(Status retweet : retweets){
+							// Se almacena el país desde donde se realizó el retweet
+							String countryRetweet;
 							try {
 								countryRetweet = retweet.getUser().getLocation();
-							} catch (NullPointerException ne){
+							} catch (NullPointerException e){
 								countryRetweet = "none";
 							}
+
+							//Geolocalización del retweet
+							String latitudeRetweet;
+							String longitudeRetweet;
+
 							try {
-								longitudeRetweet = Double.toString(retweet.getGeoLocation().getLongitude());
 								latitudeRetweet = Double.toString(retweet.getGeoLocation().getLatitude());
+								longitudeRetweet = Double.toString(retweet.getGeoLocation().getLongitude());
 							} catch (NullPointerException e){
-								longitudeRetweet = "none";
 								latitudeRetweet = "none";
+								longitudeRetweet = "none";
 							}
-							hRetweetCount = retweet.getHashtagEntities().length;
-							if(hRetweetCount > 0){
-								//Se agregan los hashtags al arreglo
+
+
+
+							// Se obtienen la cantidad de hashtags
+							int hCountRetweet = retweet.getHashtagEntities().length;
+							List<String> hashtagsRetweet = new ArrayList<>();
+							if(hCountRetweet > 0){
+								// Se agregan todos los hashtags a un arreglo
 								for(TweetEntity hashtag : retweet.getHashtagEntities()){
-									retweetsHashtags.add(hashtag.getText());
+									hashtags.add(hashtag.getText());
 								}
 							}
 
@@ -196,7 +195,7 @@ public class TwitterStreaming {
 									.append("user", retweet.getUser().getScreenName())
 									.append("name", retweet.getUser().getName())
 									.append("tweetText", retweet.getText())
-									.append("hashtags", retweetsHashtags)
+									.append("hashtags", hashtagsRetweet)
 									.append("day", day)
 									.append("month", month)
 									.append("year", year)
@@ -208,10 +207,12 @@ public class TwitterStreaming {
 
 							// Se inserta el documento en la colección de MongoDB
 							collection.insertOne(retweetDoc);
-							System.out.println("Tweet numero " + Long.toString(collection.count()) + " (Es una respuesta)");
+							System.out.println("ReTweet numero: " + collection.count());
 						}
+					} catch (TwitterException e) {
+						e.printStackTrace();
 					}
-				}*/
+				}
 			}
 		};
 
