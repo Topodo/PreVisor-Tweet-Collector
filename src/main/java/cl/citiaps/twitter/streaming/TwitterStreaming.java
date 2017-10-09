@@ -1,6 +1,8 @@
 package cl.citiaps.twitter.streaming;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 import com.mongodb.client.MongoCollection;
@@ -16,14 +18,38 @@ public class TwitterStreaming {
 	private MongoCollection<Document> collection;
 	private Set<String> keywords;
 	private Twitter twitter;
+	private String mongoHost;
+	private String mongoPort;
+	private String mongoDbName;
+	private String mongoCollName;
+	private String mysqlHost;
+	private String mysqlDbName;
+	private String mysqlUsername;
+	private String mysqlPassword;
+	private Properties prop;
 
-	private TwitterStreaming() {
+	public TwitterStreaming(Properties dbProperties) {
 		this.twitterStream = new TwitterStreamFactory().getInstance();
 		this.keywords = new HashSet<>();
 		loadKeywords();
 
+		this.prop = dbProperties;
+		/*Se cargan las propiedades de las bases de datos*/
+
+		//Propiedades de MongoDB
+		this.mongoHost = prop.getProperty("mongo_host");
+		this.mongoPort = prop.getProperty("mongo_port");
+		this.mongoDbName = prop.getProperty("mongo_db_name");
+		this.mongoCollName = prop.getProperty("mongo_coll_name");
+
+		//Propiedades de MySQL
+		this.mysqlUsername = prop.getProperty("mysql_username");
+		this.mysqlPassword = prop.getProperty("mysql_password");
+		this.mysqlHost = prop.getProperty("mysql_host");
+		this.mysqlDbName = prop.getProperty("mysql_db_name");
+
 		/* Se crea la conexión con MongoDB y se almacena la colección de Tweets */
-		this.conn = new MongoConnection("127.0.0.1", 27017, "TBD", "tweets");
+		this.conn = new MongoConnection(mongoHost, mongoPort, mongoDbName, mongoCollName);
 		this.collection = this.conn.getCollection();
 		twitter = new TwitterFactory().getInstance();
 	}
@@ -37,7 +63,7 @@ public class TwitterStreaming {
 		}
 	}
 
-	private void init() {
+	public void init() {
 
 		StatusListener listener = new StatusListener() {
 
@@ -122,6 +148,7 @@ public class TwitterStreaming {
 				collection.insertOne(tweet);
 				//Se calcula el sentimiento del tweet
 				double sentiment = new SentimentAnalyzer().calculateSentiment(status.getText());
+				System.out.println("Tweet numero: " + collection.count());
 
 				/*
 				Se verifica si el status actual es una respuesta de un tweet que fue previamente
@@ -224,9 +251,4 @@ public class TwitterStreaming {
 		}
 		return replies;
 	}
-	
-	public static void main(String[] args) {
-		new TwitterStreaming().init();
-	}
-
 }

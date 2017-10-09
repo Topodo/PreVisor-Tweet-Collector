@@ -10,14 +10,14 @@ import org.bson.Document;
 public class MongoConnection {
 
     private String host;
-    private int port;
+    private String port;
     private String dbName;
     private MongoClient client;
     private MongoDatabase db;
     private String collName;
     private MongoCollection<Document> collection;
 
-    public MongoConnection(String host, int port, String dbName, String collName){
+    public MongoConnection(String host, String port, String dbName, String collName){
         this.host = host;
         this.port = port;
         this.dbName = dbName;
@@ -26,7 +26,7 @@ public class MongoConnection {
     }
 
     public void createConnection(){
-        this.client = new MongoClient(new ServerAddress(this.host, this.port));
+        this.client = new MongoClient(new ServerAddress(this.host, Integer.valueOf(this.port)));
         this.db = client.getDatabase(this.dbName);
     }
 
