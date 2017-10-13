@@ -4,7 +4,7 @@ gradle jar
 
 **Para ejecutar**
 
-java -cp build/libs/twitter-streaming-1.0.jar cl.citiaps.twitter.streaming.TwitterStreaming
+java -cp build/libs/twitter-streaming-master-1.0.jar cl.citiaps.twitter.streaming.TwitterStreamingMain
 
 **No olvidar cambiar los tokens de identificación en el archivo twitter4j.properties**
 
