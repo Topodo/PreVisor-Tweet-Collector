@@ -1,4 +1,4 @@
-package cl.citiaps.twitter.streaming;
+package cl.citiaps.twitter.streaming.databases;
 
 import com.mongodb.MongoClient;
 import com.mongodb.ServerAddress;

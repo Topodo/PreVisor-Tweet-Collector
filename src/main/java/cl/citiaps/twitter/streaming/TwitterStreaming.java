@@ -1,10 +1,10 @@
 package cl.citiaps.twitter.streaming;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
 
+import cl.citiaps.twitter.streaming.databases.MongoConnection;
+import cl.citiaps.twitter.streaming.databases.MySqlConnection;
 import com.mongodb.client.MongoCollection;
 import org.apache.commons.io.IOUtils;
 
@@ -17,6 +17,7 @@ public class TwitterStreaming {
 	private MongoConnection conn;
 	private MongoCollection<Document> collection;
 	private Set<String> keywords;
+	private Map<Integer, String> prestadores;
 	private Twitter twitter;
 	private String mongoHost;
 	private String mongoPort;
@@ -27,11 +28,11 @@ public class TwitterStreaming {
 	private String mysqlUsername;
 	private String mysqlPassword;
 	private Properties prop;
+	private MySqlConnection mySqlConnection;
 
 	public TwitterStreaming(Properties dbProperties) {
 		this.twitterStream = new TwitterStreamFactory().getInstance();
 		this.keywords = new HashSet<>();
-		loadKeywords();
 
 		this.prop = dbProperties;
 		/*Se cargan las propiedades de las bases de datos*/
@@ -52,15 +53,21 @@ public class TwitterStreaming {
 		this.conn = new MongoConnection(mongoHost, mongoPort, mongoDbName, mongoCollName);
 		this.collection = this.conn.getCollection();
 		twitter = new TwitterFactory().getInstance();
+
+		// Se crea la conexión con MySQL para almacenar las estadísticas del tweet y obtener los keywords
+		this.mySqlConnection = new MySqlConnection(this.mysqlUsername, this.mysqlPassword, this.mysqlHost, this.mysqlDbName);
+
+
+		loadKeywords();
+		loadPrestadores();
 	}
 
 	private void loadKeywords() {
-		try {
-			ClassLoader classLoader = getClass().getClassLoader();
-			keywords.addAll(IOUtils.readLines(classLoader.getResourceAsStream("words.dat"), "UTF-8"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		this.keywords = this.mySqlConnection.getKeywords();
+	}
+
+	private void loadPrestadores(){
+		this.prestadores = this.mySqlConnection.getPrestadores();
 	}
 
 	public void init() {
@@ -147,7 +154,7 @@ public class TwitterStreaming {
 				// Se inserta el documento en la colección de MongoDB
 				collection.insertOne(tweet);
 				//Se calcula el sentimiento del tweet
-				double sentiment = new SentimentAnalyzer().calculateSentiment(status.getText());
+				new SentimentAnalyzer(mySqlConnection).calculateSentiment(status.getText(), status.getId());
 				System.out.println("Tweet numero: " + collection.count());
 
 				/*Se verifica si el status actual es un retweet, luego, almacena todos los
@@ -207,6 +214,7 @@ public class TwitterStreaming {
 
 							// Se inserta el documento en la colección de MongoDB
 							collection.insertOne(retweetDoc);
+							new SentimentAnalyzer(mySqlConnection).calculateSentiment(retweet.getText(), retweet.getId());
 							System.out.println("ReTweet numero: " + collection.count());
 						}
 					} catch (TwitterException e) {

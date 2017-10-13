@@ -1,5 +1,6 @@
 package cl.citiaps.twitter.streaming;
 
+import cl.citiaps.twitter.streaming.databases.MySqlConnection;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -21,7 +22,10 @@ public class TwitterStreamingMain {
             InputStream inputStream = new FileInputStream(resourcePath);
             properties.load(inputStream);
 
+            MySqlConnection connection = new MySqlConnection(properties.getProperty("mysql_username"), properties.getProperty("mysql_password"), properties.getProperty("mysql_host"), properties.getProperty("mysql_db_name"));
+            connection.createConnection();
             new TwitterStreaming(properties).init();
+
         } catch(IOException e){
             e.printStackTrace();
         }

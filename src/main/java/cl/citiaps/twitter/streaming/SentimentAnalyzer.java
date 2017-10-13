@@ -1,5 +1,6 @@
 package cl.citiaps.twitter.streaming;
 
+import cl.citiaps.twitter.streaming.databases.MySqlConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.CharArraySet;
@@ -16,8 +17,10 @@ public class SentimentAnalyzer {
     //Se almacenan todos los StopWords que provee el analyzer de Lucene
     private CharArraySet stopWords = new SpanishAnalyzer().getStopwordSet();
     private Map<String, Integer> dictionary;
+    private MySqlConnection connection;
 
-    public SentimentAnalyzer(){
+    public SentimentAnalyzer(MySqlConnection connection){
+        this.connection = connection;
         loadWords();
     }
 
@@ -52,7 +55,7 @@ public class SentimentAnalyzer {
     }
 
     //Método que calcula el sentimiento de un tweet
-    public double calculateSentiment(String tweet){
+    public void calculateSentiment(String tweet, long tweetId){
 
         //Tipos de sentimientos
         int negative = 0;
@@ -60,7 +63,6 @@ public class SentimentAnalyzer {
         int neutral = 0;
 
         int wordsCount = 0;
-        double approvalPercentage;
 
         //Se tokeniza el tweet
         String[] tokens = tweet.split(" ");
@@ -84,10 +86,8 @@ public class SentimentAnalyzer {
             }
         }
         if(wordsCount > 0){
-            approvalPercentage = (positive - negative) / wordsCount;
-            return approvalPercentage;
-        } else {
-            return 0;
+            //Almacena las estadísticas del tweet en MySQL
+            this.connection.setEstadisticas(negative, neutral, positive, tweetId);
         }
     }
 }
