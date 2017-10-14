@@ -61,14 +61,42 @@ public class MySqlConnection {
     }
 
     //Método que inserta las estadísticas del tweet en la base de datos MySQL, además de la id del tweet
-    public void setEstadisticas(int neg, int neutral, int pos, long tweetId) {
-        String query = "INSERT INTO valoracion (negativas, neutras, positivas, tweet_id) " +
-                "VALUES (" + neg + "," + neutral + "," + pos + "," + tweetId + ")";
+    public void setEstadisticas(int neg, int neutral, int pos, long tweetId, int prestadorId) {
+        String query;
+        //La id del prestador es -1 cuando no existe un prestador asociado al keyword
+        if(prestadorId != -1){
+            query = "INSERT INTO valoracion (negativas, neutras, positivas, tweet_id, prestador_id) " +
+                    "VALUES (" + neg + "," + neutral + "," + pos + "," + tweetId + "," + prestadorId + ")";
+        } else {
+            query = "INSERT INTO valoracion (negativas, neutras, positivas, tweet_id) " +
+                    "VALUES (" + neg + "," + neutral + "," + pos + "," + tweetId + ")";
+        }
         try {
             Statement st = this.connection.createStatement();
             st.executeUpdate(query);
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    //Método que recupera la id del prestador asociado a un keyword.
+    //Retorna -1 si el keyword no está asociado a ningún prestador.
+    public int getPrestadorId(String keyword){
+        int id = -1;
+        String query = "SELECT prestador_id " +
+                "FROM keyword " +
+                "WHERE keyword.palabra LIKE " + '"' + keyword + '"';
+        try {
+            Statement st = this.connection.createStatement();
+            ResultSet resultSet = st.executeQuery(query);
+            if(resultSet == null){
+                return -1;
+            } else {
+                id = Integer.valueOf(resultSet.getString("prestador_id"));
+                return id;
+            }
+        } catch (SQLException e) {
+            return -1;
         }
     }
 }

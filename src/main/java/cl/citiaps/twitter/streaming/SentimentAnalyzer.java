@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 
 public class SentimentAnalyzer {
@@ -55,7 +56,7 @@ public class SentimentAnalyzer {
     }
 
     //Método que calcula el sentimiento de un tweet
-    public void calculateSentiment(String tweet, long tweetId){
+    public void calculateSentiment(String tweet, long tweetId, int prestadorId){
 
         //Tipos de sentimientos
         int negative = 0;
@@ -87,7 +88,7 @@ public class SentimentAnalyzer {
         }
         if(wordsCount > 0){
             //Almacena las estadísticas del tweet en MySQL
-            this.connection.setEstadisticas(negative, neutral, positive, tweetId);
+            this.connection.setEstadisticas(negative, neutral, positive, tweetId, prestadorId);
         }
     }
 }

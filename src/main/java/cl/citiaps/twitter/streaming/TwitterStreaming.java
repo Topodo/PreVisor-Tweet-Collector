@@ -154,14 +154,14 @@ public class TwitterStreaming {
 				// Se inserta el documento en la colección de MongoDB
 				collection.insertOne(tweet);
 				//Se calcula el sentimiento del tweet
-				new SentimentAnalyzer(mySqlConnection).calculateSentiment(status.getText(), status.getId());
+				new SentimentAnalyzer(mySqlConnection).calculateSentiment(status.getText(), status.getId(), getPrestadorIdFromKeyword(status.getText()));
 				System.out.println("Tweet numero: " + collection.count());
 
 				/*Se verifica si el status actual es un retweet, luego, almacena todos los
 				retweets del status original en MongoDB
 				 */
 
-				if(status.isRetweet()){
+				/*if(status.isRetweet()){
 					try {
 						List<Status> retweets = twitter.getRetweets(status.getRetweetedStatus().getId());
 						for(Status retweet : retweets){
@@ -220,7 +220,7 @@ public class TwitterStreaming {
 					} catch (TwitterException e) {
 						e.printStackTrace();
 					}
-				}
+				}*/
 			}
 		};
 
@@ -230,6 +230,17 @@ public class TwitterStreaming {
 
 		this.twitterStream.addListener(listener);
 		this.twitterStream.filter(fq);
+	}
+
+	//Método que obtiene la id del prestador asociado al keyword asociado al tweet
+	public int getPrestadorIdFromKeyword(String tweet){
+		Set<String> keywords = this.mySqlConnection.getKeywords();
+		for(String keyword : keywords){
+			if(tweet.contains(keyword)){
+				return this.mySqlConnection.getPrestadorId(keyword);
+			}
+		}
+		return -1;
 	}
 
 	//Método que retorna la discusión generada por un tweet
