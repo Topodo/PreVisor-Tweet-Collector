@@ -98,6 +98,11 @@ public class TwitterStreaming {
 			@Override
 			public void onStatus(Status status) {
 
+				//Se verifica si el status es un retweet. En caso de serlo, se recupera el tweet original.
+				if(status.isRetweet()){
+					status = status.getRetweetedStatus();
+				}
+
 				// Se almacena el país desde donde se realizó el tweet
 				String country;
 				try {
@@ -136,91 +141,36 @@ public class TwitterStreaming {
 					}
 				}
 
+				// Se obtiene la cantidad de menciones del usuario
+				UserMentionEntity[] userMentions = status.getUserMentionEntities();
+				int userMentionsCount = userMentions.length;
+
 				// Se crea un documento que representa el JSON que se almacenará en MongoDB
 				Document tweet = new Document("id", status.getId())
-									  .append("user", status.getUser().getScreenName())
-									  .append("name", status.getUser().getName())
-									  .append("tweetText", status.getText())
-									  .append("hashtags", hashtags)
-									  .append("day", day)
-									  .append("month", month)
-									  .append("year", year)
-									  .append("latitude", latitude)
-									  .append("longitude", longitude)
-									  .append("country", country)
-						 			  .append("hour", hour)
-									  .append("minute", min);
+						.append("user", status.getUser().getScreenName())
+						.append("name", status.getUser().getName())
+						.append("tweetText", status.getText())
+						.append("hashtags", hashtags)
+						.append("day", day)
+						.append("month", month)
+						.append("year", year)
+						.append("latitude", latitude)
+						.append("longitude", longitude)
+						.append("country", country)
+						.append("hour", hour)
+						.append("minute", min)
+						.append("favouriteCount", status.getFavoriteCount())
+						.append("retweetCount", status.getRetweetCount())
+						.append("userMentionsCount", userMentionsCount)
+						.append("profileImage", status.getUser().getProfileImageURL())
+						.append("followersCount", status.getUser().getFollowersCount())
+						.append("friendsCount", status.getUser().getFriendsCount())
+						.append("userVerified", status.getUser().isVerified())
+						.append("createdAt", status.getCreatedAt());
 
 				// Se inserta el documento en la colección de MongoDB
 				collection.insertOne(tweet);
-				//Se calcula el sentimiento del tweet
-				new SentimentAnalyzer(mySqlConnection).calculateSentiment(status.getText(), status.getId(), getPrestadorIdFromKeyword(status.getText()));
 				System.out.println("Tweet numero: " + collection.count());
-
-				/*Se verifica si el status actual es un retweet, luego, almacena todos los
-				retweets del status original en MongoDB
-				 */
-
-				/*if(status.isRetweet()){
-					try {
-						List<Status> retweets = twitter.getRetweets(status.getRetweetedStatus().getId());
-						for(Status retweet : retweets){
-							// Se almacena el país desde donde se realizó el retweet
-							String countryRetweet;
-							try {
-								countryRetweet = retweet.getUser().getLocation();
-							} catch (NullPointerException e){
-								countryRetweet = "none";
-							}
-
-							//Geolocalización del retweet
-							String latitudeRetweet;
-							String longitudeRetweet;
-
-							try {
-								latitudeRetweet = Double.toString(retweet.getGeoLocation().getLatitude());
-								longitudeRetweet = Double.toString(retweet.getGeoLocation().getLongitude());
-							} catch (NullPointerException e){
-								latitudeRetweet = "none";
-								longitudeRetweet = "none";
-							}
-
-
-
-							// Se obtienen la cantidad de hashtags
-							int hCountRetweet = retweet.getHashtagEntities().length;
-							List<String> hashtagsRetweet = new ArrayList<>();
-							if(hCountRetweet > 0){
-								// Se agregan todos los hashtags a un arreglo
-								for(TweetEntity hashtag : retweet.getHashtagEntities()){
-									hashtags.add(hashtag.getText());
-								}
-							}
-
-							// Se crea un documento que representa el JSON que se almacenará en MongoDB
-							Document retweetDoc = new Document("id", retweet.getId())
-									.append("user", retweet.getUser().getScreenName())
-									.append("name", retweet.getUser().getName())
-									.append("tweetText", retweet.getText())
-									.append("hashtags", hashtagsRetweet)
-									.append("day", day)
-									.append("month", month)
-									.append("year", year)
-									.append("latitude", latitudeRetweet)
-									.append("longitude", longitudeRetweet)
-									.append("country", countryRetweet)
-									.append("hour", hour)
-									.append("minute", min);
-
-							// Se inserta el documento en la colección de MongoDB
-							collection.insertOne(retweetDoc);
-							new SentimentAnalyzer(mySqlConnection).calculateSentiment(retweet.getText(), retweet.getId());
-							System.out.println("ReTweet numero: " + collection.count());
-						}
-					} catch (TwitterException e) {
-						e.printStackTrace();
-					}
-				}*/
 			}
 		};
 
@@ -230,45 +180,5 @@ public class TwitterStreaming {
 
 		this.twitterStream.addListener(listener);
 		this.twitterStream.filter(fq);
-	}
-
-	//Método que obtiene la id del prestador asociado al keyword asociado al tweet
-	public int getPrestadorIdFromKeyword(String tweet){
-		Set<String> keywords = this.mySqlConnection.getKeywords();
-		for(String keyword : keywords){
-			if(tweet.contains(keyword)){
-				return this.mySqlConnection.getPrestadorId(keyword);
-			}
-		}
-		return -1;
-	}
-
-	//Método que retorna la discusión generada por un tweet
-	public List<Status> getDiscussion(Status status, Twitter twitter){
-
-		List<Status> replies = new ArrayList<>();
-		List<Status> tweets;
-
-		try{
-			Query query = new Query("to:" + status.getUser().getScreenName());
-			query.setSinceId(status.getId());
-			QueryResult results;
-			do{
-				results = twitter.search(query);
-				tweets = results.getTweets();
-				System.out.println("elementos: " + tweets.size());
-				for(Status tweet : tweets){
-					System.out.println(tweet.getText() + " lalala");
-					//Se compara si la id del tweet original es igual a la id del tweet obtenido por la consulta
-					if(status.getId() == tweet.getInReplyToStatusId()){
-						replies.add(tweet);
-					}
-				}
-			} while((query = results.nextQuery()) != null);
-
-		} catch (TwitterException e) {
-			e.printStackTrace();
-		}
-		return replies;
 	}
 }
