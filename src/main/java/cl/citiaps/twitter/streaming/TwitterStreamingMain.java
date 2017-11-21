@@ -17,7 +17,7 @@ public class TwitterStreamingMain {
         File file = new File(TwitterStreamingMain.class.getProtectionDomain().getCodeSource().getLocation().getPath());
         Properties properties = new Properties();
         try{
-            String resourcePath = file.getPath().replace("libs/twitter-streaming-1.0.jar", "") + "resources/main/bd.properties";
+            String resourcePath = file.getPath().replace("classes", "") + "resources/bd.properties";
             resourcePath = resourcePath.replace("%20", " ");
             InputStream inputStream = new FileInputStream(resourcePath);
             properties.load(inputStream);
